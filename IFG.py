@@ -117,7 +117,7 @@ def main():
           a = round(random.random(), 1)
           b = round(random.random(), 1)
           if a + b <= 1.:
-              colors_s.append((a, b, round(1 - a - b, 1)))
+              colors_s.append((a, b, round(1 - a - b, 1), 0.3))
       colors_s = list(set(colors_s))
       idxs = []
       idxt = []
