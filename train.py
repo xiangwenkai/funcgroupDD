@@ -41,134 +41,134 @@ parser.add_argument("--context", nargs='+', default=[],
 
 
 def train(it):
-        model.train()
-        # Horovod: set epoch to sampler for shuffling.
-        # train_sampler.set_epoch(it)
-        sum_loss, sum_n = 0, 0
-        sum_loss_global, sum_node_global = 0, 0
-        sum_loss_local, sum_node_local = 0, 0
-        sum_loss_clash = 0
-        if args.use_mixed_precision:
-            with tqdm(total=len(train_loader), desc='Training') as pbar:
-                for i, batch in enumerate(train_loader):
-                    optimizer.zero_grad()
-                    batch = batch.cuda()
-                    context = None
-                    loss_vae_KL = 0.00
+    model.train()
+    # Horovod: set epoch to sampler for shuffling.
+    # train_sampler.set_epoch(it)
+    sum_loss, sum_n = 0, 0
+    sum_loss_global, sum_node_global = 0, 0
+    sum_loss_local, sum_node_local = 0, 0
+    sum_loss_clash = 0
+    if args.use_mixed_precision:
+        with tqdm(total=len(train_loader), desc='Training') as pbar:
+            for i, batch in enumerate(train_loader):
+                optimizer.zero_grad()
+                batch = batch.cuda()
+                context = None
+                loss_vae_KL = 0.00
 
-                    if 'full' in config.model.network:
-                        with torch.cuda.amp.autocast():
-                            loss = model(
-                                batch,
-                                context = context,
-                                return_unreduced_loss=True
-                            )
-                        
-                        if config.model.vae_context:
-                            # loss, loss_global, loss_local, loss_node_global, loss_node_local, loss_clash, loss_vae_KL = loss
-                            loss, loss_global, loss_local, loss_node_global, loss_node_local, loss_vae_KL = loss
-                            loss_vae_KL = loss_vae_KL.mean().item()
-                        else:
-                            # loss, loss_global, loss_local, loss_node_global, loss_node_local, loss_clash = loss
-                            loss, loss_global, loss_local, loss_node_global, loss_node_local = loss
-                        loss = loss.mean()
-                        scaler.scale(loss).backward()
-                        optimizer.synchronize()
-
-                        scaler.unscale_(optimizer)
-
-                        with optimizer.skip_synchronize():
-                            scaler.step(optimizer)
-                        scaler.update()
-
-                        sum_loss += loss.item()
-                        sum_n += 1
-                        sum_loss_global += loss_global.mean().item()
-                        sum_loss_local += loss_local.mean().item()
-                        sum_node_global += loss_node_global.mean().item()
-                        sum_node_local += loss_node_local.mean().item()
-                        # sum_loss_clash += loss_clash.mean().item()
-                        pbar.set_postfix({'loss':'%.2f'%(loss.item())})
-                        pbar.update(1)
-                        # print('loss:%.2f'%(sum_loss))
-        else:
-            with tqdm(total=len(train_loader), desc='Training') as pbar:
-                for i, batch in enumerate(train_loader):
-                    # optimizer_global.synchronize()
-                    optimizer_global.zero_grad()
-                    if 'global' not  in config.model.network:
-                        # optimizer_local.synchronize()
-                        optimizer_local.zero_grad()
-                    # optimizer.zero_grad()
-                    batch = batch.to(device)
-                    
-                    if len(args.context) > 0:
-                        context = prepare_context(args.context, batch, property_norms)
-                    else:
-                        context = None
-                    loss_vae_KL = 0.00
-
-                    # print(batch.num_nodes_per_graph)
-                    if 'full' in config.model.network:
+                if 'full' in config.model.network:
+                    with torch.cuda.amp.autocast():
                         loss = model(
                             batch,
                             context = context,
                             return_unreduced_loss=True
                         )
-                        
-                        if config.model.vae_context:
-                            # loss, loss_global, loss_local, loss_node_global, loss_node_local, loss_clash, loss_vae_KL = loss
-                            loss, loss_global, loss_local, loss_node_global, loss_node_local, loss_vae_KL = loss
-                            loss_vae_KL = loss_vae_KL.mean().item()
-                        else:
-                            # loss, loss_global, loss_local, loss_node_global, loss_node_local, loss_clash = loss
-                            loss, loss_global, loss_local, loss_node_global, loss_node_local = loss
-                        loss = loss.mean()
-                        # loss_p = batch['p_score'].mean()*20
-                        # loss = loss+loss_p
-                        loss.backward()
+
+                    if config.model.vae_context:
+                        # loss, loss_global, loss_local, loss_node_global, loss_node_local, loss_clash, loss_vae_KL = loss
+                        loss, loss_global, loss_local, loss_node_global, loss_node_local, loss_vae_KL = loss
+                        loss_vae_KL = loss_vae_KL.mean().item()
+                    else:
+                        # loss, loss_global, loss_local, loss_node_global, loss_node_local, loss_clash = loss
+                        loss, loss_global, loss_local, loss_node_global, loss_node_local = loss
+                    loss = loss.mean()
+                    scaler.scale(loss).backward()
+                    optimizer.synchronize()
+
+                    scaler.unscale_(optimizer)
+
+                    with optimizer.skip_synchronize():
+                        scaler.step(optimizer)
+                    scaler.update()
+
+                    sum_loss += loss.item()
+                    sum_n += 1
+                    sum_loss_global += loss_global.mean().item()
+                    sum_loss_local += loss_local.mean().item()
+                    sum_node_global += loss_node_global.mean().item()
+                    sum_node_local += loss_node_local.mean().item()
+                    # sum_loss_clash += loss_clash.mean().item()
+                    pbar.set_postfix({'loss':'%.2f'%(loss.item())})
+                    pbar.update(1)
+                    # print('loss:%.2f'%(sum_loss))
+    else:
+        with tqdm(total=len(train_loader), desc='Training') as pbar:
+            for i, batch in enumerate(train_loader):
+                # optimizer_global.synchronize()
+                optimizer_global.zero_grad()
+                if 'global' not  in config.model.network:
+                    # optimizer_local.synchronize()
+                    optimizer_local.zero_grad()
+                # optimizer.zero_grad()
+                batch = batch.to(device)
+
+                if len(args.context) > 0:
+                    context = prepare_context(args.context, batch, property_norms)
+                else:
+                    context = None
+                loss_vae_KL = 0.00
+
+                # print(batch.num_nodes_per_graph)
+                if 'full' in config.model.network:
+                    loss = model(
+                        batch,
+                        context = context,
+                        return_unreduced_loss=True
+                    )
+
+                    if config.model.vae_context:
+                        # loss, loss_global, loss_local, loss_node_global, loss_node_local, loss_clash, loss_vae_KL = loss
+                        loss, loss_global, loss_local, loss_node_global, loss_node_local, loss_vae_KL = loss
+                        loss_vae_KL = loss_vae_KL.mean().item()
+                    else:
+                        # loss, loss_global, loss_local, loss_node_global, loss_node_local, loss_clash = loss
+                        loss, loss_global, loss_local, loss_node_global, loss_node_local = loss
+                    loss = loss.mean()
+                    # loss_p = batch['p_score'].mean()*20
+                    # loss = loss+loss_p
+                    loss.backward()
 
 
-                        orig_grad_norm = clip_grad_norm_(model.parameters(), config.train.max_grad_norm)
+                    orig_grad_norm = clip_grad_norm_(model.parameters(), config.train.max_grad_norm)
 
-                        optimizer.step()
+                    optimizer.step()
 
-                        sum_loss += loss.item()
-                        sum_n += 1
-                        sum_loss_global += loss_global.mean().item()
-                        sum_loss_local += loss_local.mean().item()
-                        sum_node_global += loss_node_global.mean().item()
-                        sum_node_local += loss_node_local.mean().item()
-                        # sum_loss_clash += loss_clash.mean().item()
-                        pbar.set_postfix({'loss':'%.2f'%(loss.item())})
-                        pbar.update(1)
-                        # print('loss:%.2f'%(sum_loss))
+                    sum_loss += loss.item()
+                    sum_n += 1
+                    sum_loss_global += loss_global.mean().item()
+                    sum_loss_local += loss_local.mean().item()
+                    sum_node_global += loss_node_global.mean().item()
+                    sum_node_local += loss_node_local.mean().item()
+                    # sum_loss_clash += loss_clash.mean().item()
+                    pbar.set_postfix({'loss':'%.2f'%(loss.item())})
+                    pbar.update(1)
+                    # print('loss:%.2f'%(sum_loss))
 
-        avg_loss = sum_loss / sum_n
-        avg_loss_global = sum_loss_global / sum_n
-        avg_loss_local = sum_loss_local / sum_n
-        avg_loss_node_global = sum_node_global / sum_n
-        avg_loss_node_local = sum_node_local / sum_n
-        # avg_loss_clash = sum_loss_clash / sum_n
+    avg_loss = sum_loss / sum_n
+    avg_loss_global = sum_loss_global / sum_n
+    avg_loss_local = sum_loss_local / sum_n
+    avg_loss_node_global = sum_node_global / sum_n
+    avg_loss_node_local = sum_node_local / sum_n
+    # avg_loss_clash = sum_loss_clash / sum_n
 
 
-        # logger.info('[Train] Epoch %05d | Loss %.2f | horovod_Loss %.2f | Loss(Global) %.2f | Loss(Local) %.2f | Loss(node_global) %.2f | Loss(node_local) %.2f | Loss(clash) %.2f | Loss(vae_KL) %.2f |Grad %.2f | LR %.6f' % (
-        #         it, avg_loss, train_loss, avg_loss_global, avg_loss_local, avg_loss_node_global, avg_loss_node_local, avg_loss_clash, loss_vae_KL, orig_grad_norm, optimizer_global.param_groups[0]['lr'],
-        #     ))
-        logger.info('[Train] Epoch %05d | Loss %.2f | Loss(Global) %.2f | Loss(Local) %.2f | Loss(node_global) %.2f | Loss(node_local) %.2f | Loss(vae_KL) %.2f |Grad %.2f | LR %.6f' % (
-                it, avg_loss, avg_loss_global, avg_loss_local, avg_loss_node_global, avg_loss_node_local, loss_vae_KL, orig_grad_norm, optimizer_global.param_groups[0]['lr'],
-            ))
-        writer.add_scalar('train/loss', avg_loss, it)
-        writer.add_scalar('train/loss_global', avg_loss_global, it)
-        writer.add_scalar('train/loss_local', avg_loss_local, it)
-        writer.add_scalar('train/loss_node_global', avg_loss_node_global, it)
-        writer.add_scalar('train/loss_node_local', avg_loss_node_local, it)
-        # writer.add_scalar('train/loss_clash', avg_loss_clash, it)
-        writer.add_scalar('train/loss_vae_KL', loss_vae_KL, it)
-        writer.add_scalar('train/lr_global', optimizer_global.param_groups[0]['lr'], it)
-        writer.add_scalar('train/lr_local', optimizer_local.param_groups[0]['lr'], it)
-        writer.add_scalar('train/grad_norm', orig_grad_norm, it)
-        writer.flush()
+    # logger.info('[Train] Epoch %05d | Loss %.2f | horovod_Loss %.2f | Loss(Global) %.2f | Loss(Local) %.2f | Loss(node_global) %.2f | Loss(node_local) %.2f | Loss(clash) %.2f | Loss(vae_KL) %.2f |Grad %.2f | LR %.6f' % (
+    #         it, avg_loss, train_loss, avg_loss_global, avg_loss_local, avg_loss_node_global, avg_loss_node_local, avg_loss_clash, loss_vae_KL, orig_grad_norm, optimizer_global.param_groups[0]['lr'],
+    #     ))
+    logger.info('[Train] Epoch %05d | Loss %.2f | Loss(Global) %.2f | Loss(Local) %.2f | Loss(node_global) %.2f | Loss(node_local) %.2f | Loss(vae_KL) %.2f |Grad %.2f | LR %.6f' % (
+            it, avg_loss, avg_loss_global, avg_loss_local, avg_loss_node_global, avg_loss_node_local, loss_vae_KL, orig_grad_norm, optimizer_global.param_groups[0]['lr'],
+        ))
+    writer.add_scalar('train/loss', avg_loss, it)
+    writer.add_scalar('train/loss_global', avg_loss_global, it)
+    writer.add_scalar('train/loss_local', avg_loss_local, it)
+    writer.add_scalar('train/loss_node_global', avg_loss_node_global, it)
+    writer.add_scalar('train/loss_node_local', avg_loss_node_local, it)
+    # writer.add_scalar('train/loss_clash', avg_loss_clash, it)
+    writer.add_scalar('train/loss_vae_KL', loss_vae_KL, it)
+    writer.add_scalar('train/lr_global', optimizer_global.param_groups[0]['lr'], it)
+    writer.add_scalar('train/lr_local', optimizer_local.param_groups[0]['lr'], it)
+    writer.add_scalar('train/grad_norm', orig_grad_norm, it)
+    writer.flush()
 
 def validate(it):
     sum_loss, sum_n = 0, 0
