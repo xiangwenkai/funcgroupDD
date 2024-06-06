@@ -144,12 +144,12 @@ class PDBProtein(object):
 
     def to_dict_atom(self):
         return {
-            'element': np.array(self.element, dtype=np.long),
+            'element': np.array(self.element, dtype=np.longlong),
             'molecule_name': self.title,
             'pos': np.array(self.pos, dtype=np.float32),
             'is_backbone': np.array(self.is_backbone, dtype=np.bool),
             'atom_name': self.atom_name,
-            'atom_to_aa_type': np.array(self.atom_to_aa_type, dtype=np.long)
+            'atom_to_aa_type': np.array(self.atom_to_aa_type, dtype=np.longlong)
         }
 
     def to_dict_atom_cutoff(self, ligand_pos, cutoff):
@@ -169,17 +169,17 @@ class PDBProtein(object):
                     atom_to_aa_type.append(self.atom_to_aa_type[atom_idx])
 
         return {
-            'element': np.array(element, dtype=np.long),
+            'element': np.array(element, dtype=np.longlong),
             'molecule_name': self.title,
             'pos': np.array(pos, dtype=np.float32),
-            'is_backbone': np.array(is_backbone, dtype=np.bool),
+            'is_backbone': np.array(is_backbone, dtype=np.bool_),
             'atom_name': atom_name,
-            'atom_to_aa_type': np.array(atom_to_aa_type, dtype=np.long)
+            'atom_to_aa_type': np.array(atom_to_aa_type, dtype=np.longlong)
         }
 
     def to_dict_residue(self):
         return {
-            'amino_acid': np.array(self.amino_acid, dtype=np.long),
+            'amino_acid': np.array(self.amino_acid, dtype=np.longlong),
             'center_of_mass': np.array(self.center_of_mass, dtype=np.float32),
             'pos_CA': np.array(self.pos_CA, dtype=np.float32),
             'pos_C': np.array(self.pos_C, dtype=np.float32),
@@ -240,7 +240,7 @@ def parse_sdf_file(path):
     rdmol.UpdatePropertyCache(strict=False)
     Chem.GetSymmSSSR(rdmol)
     rd_num_atoms = rdmol.GetNumAtoms()
-    feat_mat = np.zeros([rd_num_atoms, len(ATOM_FAMILIES)], dtype=np.long)
+    feat_mat = np.zeros([rd_num_atoms, len(ATOM_FAMILIES)], dtype=np.longlong)
 
     '''
     搜索到的每个特征都包含了该特征家族（例如供体、受体等）、特征类别、该特征对应的原子、特征对应序号等信息。
@@ -281,7 +281,7 @@ def parse_sdf_file(path):
 
     center_of_mass = np.array(accum_pos / accum_mass, dtype=np.float32)
 
-    element = np.array(element, dtype=np.int)
+    element = np.array(element, dtype=np.int_)
     pos = np.array(pos, dtype=np.float32)
 
     BOND_TYPES = {t: i for i, t in enumerate(BondType.names.values())}
@@ -298,8 +298,8 @@ def parse_sdf_file(path):
         col += [end, start]
         edge_type += 2 * [bond_type_map[int(bond_line[6:9])]]
 
-    edge_index = np.array([row, col], dtype=np.long)
-    edge_type = np.array(edge_type, dtype=np.long)
+    edge_index = np.array([row, col], dtype=np.longlong)
+    edge_type = np.array(edge_type, dtype=np.longlong)
 
     perm = (edge_index[0] * num_atoms + edge_index[1]).argsort()
     edge_index = edge_index[:, perm]

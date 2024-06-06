@@ -1,4 +1,5 @@
 import os
+import pickle
 import shutil
 import argparse
 from tqdm.auto import tqdm
@@ -151,7 +152,6 @@ def train(it):
     avg_loss_node_local = sum_node_local / sum_n
     # avg_loss_clash = sum_loss_clash / sum_n
 
-
     # logger.info('[Train] Epoch %05d | Loss %.2f | horovod_Loss %.2f | Loss(Global) %.2f | Loss(Local) %.2f | Loss(node_global) %.2f | Loss(node_local) %.2f | Loss(clash) %.2f | Loss(vae_KL) %.2f |Grad %.2f | LR %.6f' % (
     #         it, avg_loss, train_loss, avg_loss_global, avg_loss_local, avg_loss_node_global, avg_loss_node_local, avg_loss_clash, loss_vae_KL, orig_grad_norm, optimizer_global.param_groups[0]['lr'],
     #     ))
@@ -248,7 +248,7 @@ if __name__ == '__main__':
     if resume:
         print('Resume!')
         config_path = glob(os.path.join(args.config, '*.yml'))[0]
-        config_path = './configs/pdbind_epoch.yml' # fintune in PDBind dataset
+        config_path = './configs/pdbind_epoch.yml'  # fintune in PDBind dataset
         # config_path = './configs/crossdock_epoch.yml'
         resume_from = args.config
     else:
@@ -272,7 +272,7 @@ if __name__ == '__main__':
     else:
         log_dir = get_new_log_dir(args.logdir, prefix=config_name)
         if not os.path.exists(os.path.join(log_dir, 'models')):
-            shutil.copytree('./models', os.path.join(log_dir, 'models'),dirs_exist_ok=True)
+            shutil.copytree('./models', os.path.join(log_dir, 'models'), dirs_exist_ok=True)
     ckpt_dir = os.path.join(log_dir, 'checkpoints')
     os.makedirs(ckpt_dir, exist_ok=True)
     logger = get_logger('train')
@@ -330,8 +330,8 @@ if __name__ == '__main__':
     # Datasets and loaders
     # logger.info('Loading {} dataset...'.format(config.dataset.name))
     dataset, subsets = get_dataset(
-        config = config.dataset,
-        transform = transform,
+        config=config.dataset,
+        transform=transform,
     )
     train_set, val_set = subsets['train'], subsets['test']
     print(len(train_set))
@@ -352,13 +352,12 @@ if __name__ == '__main__':
     
     collate_exclude_keys = ['ligand_nbh_list']
 
-
     train_loader = DataLoader(
         train_set, 
-        batch_size = config.train.batch_size, 
-        shuffle = False,
-        follow_batch = follow_batch,
-        exclude_keys = collate_exclude_keys,
+        batch_size=config.train.batch_size,
+        shuffle=False,
+        follow_batch=follow_batch,
+        exclude_keys=collate_exclude_keys,
         **kwargs
     )
     val_loader = DataLoader(
@@ -366,12 +365,11 @@ if __name__ == '__main__':
         config.train.batch_size, 
         shuffle=False,
         follow_batch=follow_batch,
-        exclude_keys = collate_exclude_keys,
+        exclude_keys=collate_exclude_keys,
         **kwargs
     )
 
     # Model
-
     logger.info('Building model...')
     # config.model.context = args.context
     # config.model.num_atom = len(dataset_info['atom_decoder'])+1
@@ -380,10 +378,9 @@ if __name__ == '__main__':
     # Optimizer
     optimizer_global = get_optimizer(config.train.optimizer, model.model_global)
     scheduler_global = get_scheduler(config.train.scheduler, optimizer_global)
-    if 'global' not  in config.model.network:
+    if 'global' not in config.model.network:
         optimizer_local = get_optimizer(config.train.optimizer, model.model_local)
         scheduler_local = get_scheduler(config.train.scheduler, optimizer_local)
-
 
     optimizer = get_optimizer(config.train.optimizer, model)
     scheduler = get_scheduler(config.train.scheduler, optimizer)
@@ -409,7 +406,6 @@ if __name__ == '__main__':
         scheduler.load_state_dict(ckpt['scheduler'])
         config.train.max_iters = start_iter + config.train['max_iters']
         start_iter+=1
-
     
     best_val_loss = float('inf')
     for it in range(start_iter, config.train.max_iters + 1):
@@ -434,9 +430,6 @@ if __name__ == '__main__':
         train(it)
         end_time = (time.time() - start_time)
         print('each iteration requires {} s'.format(end_time))
-           
-            
-
 
 
 
