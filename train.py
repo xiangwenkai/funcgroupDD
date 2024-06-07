@@ -408,6 +408,7 @@ if __name__ == '__main__':
         start_iter+=1
     
     best_val_loss = float('inf')
+    # train(1)
     for it in range(start_iter, config.train.max_iters + 1):
         avg_val_loss = validate(it)
         if it % config.train.val_freq == 0:
